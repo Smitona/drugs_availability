@@ -11,9 +11,12 @@ from dataclasses import dataclass
 
 from selenium import webdriver
 
+from scraper.items import DrugItem
+
 
 class DrugsSpider(scrapy.Spider):
-    name = 'drugs'
+    name = 'drugs_spider'
+    start_urls = getenv('URL')
 
     def __init__(self):
         self.driver = webdriver.Chrome()
@@ -37,11 +40,11 @@ class DrugsSpider(scrapy.Spider):
         )
 
     async def click_auth_button(self, response):
+        """Кликнуть кнопку «Продолжить без авторизации», чтобы получить ответ страницы."""
         link = await self.build_url()
         response = requests.get(link)
 
         if response.status_code == 200:
-            # Кликнуть кнопку «Продолжить без авторизации», чтобы получить ответ страницы
             self.driver.get(response.url)
             auth_button = self.driver.find_element_by_xpath(
                 '//*[@id="common-popup"]/div/div[1]/div/div[3]/div/div[1]/button'
@@ -51,6 +54,7 @@ class DrugsSpider(scrapy.Spider):
                 auth_button.click()
 
     async def get_drug_forms(self, response):
+        """Вернуть список для выбора формы препарата."""
         response = HtmlResponse(url=self.build_url(), body=body, encoding="utf-8")
 
         drug_forms = Selector(response=response).xpath(
@@ -62,6 +66,20 @@ class DrugsSpider(scrapy.Spider):
         else:
             # Вернуть список для выбора формы препарата
             return enumerate(drug_forms)
+        
+        
+    async def parse(self, response, drug_form_number):
+        """Получение данных по построенному URL и выбранной форме препарата"""
+
+        self.click_auth_button()
+
+        drug_form = Selector(response=response).xpath(
+            f'//*[@id="medicament-search-result"]/div/div[{drug_form_number}]/button/span'
+        ).get()
+
+        
+
+        
 
 @dataclass
 class SearchOption:
