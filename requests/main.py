@@ -1,5 +1,5 @@
 import requests
-from sqlalchemy import create_engine, select
+from sqlalchemy import create_engine, select, exists
 from sqlalchemy.orm import Session
 
 from models import Drug
@@ -27,21 +27,27 @@ def make_request(payload: dict) -> str:
 
     response_json = response.json()
 
+    return response_json['result']
 
-def write_data(name: str):
+
+def write_data(response: str) -> None:
     name = build_payload()['nom']
     engine = create_engine("postgresql://", echo=True)
 
     with Session(engine) as session:
 
-        drug_in_DB = (
-            select(Drug)
-            .where(Drug.name == name)
-        )
-        if drug_in_DB.exists() is False:
-            
+        drug_in_DB = select(Drug.id).where(Drug.name == name)
 
-            session.add_all()
+        if select(Drug).where(exists(drug_in_DB)) is False:
+            drug = Drug(
+                name=name,
+                dosage=response['dosage'],
+                сut_rate=response['сut_rate'],
+                data_time=response['data_time'],
+                package=response['package']
+            )
+            session.add(drug)
+            session.commit()
 
         session.commit()
 

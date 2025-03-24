@@ -18,6 +18,11 @@ pharmacy_drug_association = Table(
     Base.metadata,
     Column('pharmacy_id', ForeignKey('pharmacies.id')),
     Column('drug_id', ForeignKey('drugs.id')),
+    Column('regional_сount', Integer, nullable=False, default=0),
+    Column('federal_count', Integer, nullable=False, default=0),
+    Column('ssz_count', Integer, nullable=False, default=0),
+    Column('psychiatry_count', Integer, nullable=False, default=0),
+    Column('refugee_count', Integer, nullable=False, default=0)
 )
 
 
@@ -49,7 +54,7 @@ class Drug(Base):
     __tablename__ = 'drugs'
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    name = Column(String, nullable=False)
+    name = Column(String, nullable=False, unique=True)
     dosage = Column(String)
     сut_rate = Column(Boolean, server_default='true', nullable=False)
     data_time = Column(DateTime)
