@@ -6,31 +6,42 @@ import asyncio
 import logging
 import sys
 
-from aiogram import Bot, Dispatcher, Router, types
+from aiogram import Bot, Dispatcher, Router
 from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram.utils.markdown import hbold
+from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.client.bot import DefaultBotProperties
 
 load_dotenv()
 
 
 TG_TOKEN = getenv('TOKEN')
-dp = Dispatcher()
+router = Router()
 
 
-@dp.message()
+@router.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     """
     Handler for messages '/start' command
     """
     await message.answer(
-        f'Здравствуйте, {hbold(message.from_user.full_name)}!'
+        f"""
+        Здравствуйте, {hbold(message.from_user.full_name)}!
+        """
     )
 
 
 async def main() -> None:
-    bot = Bot(token=TG_TOKEN, parse_mode=ParseMode.HTML)
+    bot = Bot(
+        token=TG_TOKEN,
+        session=AiohttpSession(),
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
+    dp = Dispatcher()
+    dp.include_router(router)
+
     await dp.start_polling(bot)
 
 

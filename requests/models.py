@@ -24,6 +24,7 @@ class Pharmacy_drug(Base):
     drug_id = Column(
         Integer, ForeignKey('drugs.id'), primary_key=True
     )
+    data_time = Column(DateTime)
     regional_count = Column(Integer, nullable=False, default=0)
     federal_count = Column(Integer, nullable=False, default=0)
     ssz_count = Column(Integer, nullable=False, default=0)
@@ -62,7 +63,6 @@ class Drug(Base):
     name = Column(String, nullable=False)
     dosage = Column(String, nullable=False)
     сut_rate = Column(Boolean, server_default='true', nullable=False)
-    data_time = Column(DateTime)
     package = Column(String)
     pharmacy = relationship(
         'Pharmacy', secondary='pharmacy_drug', back_populates='drugs'
