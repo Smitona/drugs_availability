@@ -1,47 +1,51 @@
-from sqlalchemy import (
-    Column, Integer, String, Boolean, Interval,
-    DateTime, Table, ForeignKey, UniqueConstraint
-)
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base 
+from sqlalchemy import Interval, DateTime, Table, ForeignKey, UniqueConstraint
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 
-Base = declarative_base()
 
-user_drug_association = Table(
-    'user_drug_association',
-    Base.metadata,
-    Column('user_id', ForeignKey('users.id')),
-    Column('drug_id', ForeignKey('drugs.id')),
-)
+class Base(DeclarativeBase):
+    pass
+
+
+class User_drug(Base):
+    __tablename__ = 'user_drug'
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey('users.id'), primary_key=True
+    )
+    drug_id: Mapped[int] = mapped_column(
+        ForeignKey('drugs.id'), primary_key=True
+    )
 
 
 class Pharmacy_drug(Base):
     __tablename__ = 'pharmacy_drug'
 
-    pharmacy_id = Column(
-        Integer, ForeignKey('pharmacies.id'), primary_key=True
+    pharmacy_id: Mapped[int] = mapped_column(
+        ForeignKey('pharmacies.id'), primary_key=True
     )
-    drug_id = Column(
-        Integer, ForeignKey('drugs.id'), primary_key=True
+    drug_id: Mapped[int] = mapped_column(
+        ForeignKey('drugs.id'), primary_key=True
     )
-    data_time = Column(DateTime)
-    regional_count = Column(Integer, nullable=False, default=0)
-    federal_count = Column(Integer, nullable=False, default=0)
-    ssz_count = Column(Integer, nullable=False, default=0)
-    psychiatry_count = Column(Integer, nullable=False, default=0)
-    refugee_count = Column(Integer, nullable=False, default=0)
+    data_time: Mapped[DateTime]
+    regional_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    federal_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    ssz_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    psychiatry_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    refugee_count: Mapped[int] = mapped_column(nullable=False, default=0)
 
 
 class Pharmacy(Base):
     __tablename__ = 'pharmacies'
 
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    working_time = Column(Interval)
-    phone = Column(String)
-    subway = Column(String)
-    name = Column(String, unique=True)
-    address = Column(String)
-    drugs = relationship(
+    id: Mapped[int] = mapped_column(
+        primary_key=True, nullable=False, autoincrement=True
+    )
+    working_time: Mapped[Interval]
+    phone: Mapped[str]
+    subway: Mapped[str] = mapped_column(unique=True)
+    name: Mapped[str] = mapped_column(unique=True, nullable=False)
+    address: Mapped[str] = mapped_column(unique=True, nullable=False)
+    drugs: Mapped[list['Drug']] = relationship(
         'Drug', secondary='pharmacy_drug', back_populates='pharmacy'
     )
 
@@ -49,26 +53,32 @@ class Pharmacy(Base):
 class User(Base):
     __tablename__ = 'users'
 
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    telegram_id = Column(Integer)
-    drugs = relationship(
-        'Drug', secondary=user_drug_association, back_populates='users'
+    id: Mapped[int] = mapped_column(
+        primary_key=True, nullable=False, autoincrement=True
+    )
+    telegram_id: Mapped[int] = mapped_column(unique=True)
+    drugs: Mapped[list['Drug']] = relationship(
+        'Drug', secondary='user_drug', back_populates='users'
     )
 
 
 class Drug(Base):
     __tablename__ = 'drugs'
 
-    id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
-    name = Column(String, nullable=False)
-    dosage = Column(String, nullable=False)
-    сut_rate = Column(Boolean, server_default='true', nullable=False)
-    package = Column(String)
-    pharmacy = relationship(
+    id: Mapped[int] = mapped_column(
+        primary_key=True, nullable=False, autoincrement=True
+    )
+    name: Mapped[str] = mapped_column(nullable=False)
+    dosage: Mapped[str] = mapped_column(nullable=False)
+    сut_rate: Mapped[bool] = mapped_column(
+        server_default='true', nullable=False
+    )
+    package: Mapped[str]
+    pharmacy: Mapped[list['Pharmacy']] = relationship(
         'Pharmacy', secondary='pharmacy_drug', back_populates='drugs'
     )
-    users = relationship(
-        'User', secondary=user_drug_association, back_populates='drugs'
+    users: Mapped[list['User']] = relationship(
+        'User', secondary='user_drug', back_populates='drugs'
     )
 
     __table_args__ = (

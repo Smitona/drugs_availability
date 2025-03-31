@@ -26,6 +26,9 @@ def make_request(name: str) -> str:
 
     try:
         result = response.json()['result']
+    except Exception:
+        print('Актуальные данные недоступны.', response.json()['message'])
+        result = []
     except KeyError:
         time.sleep(5)
         result = response.json()['result']
@@ -72,11 +75,28 @@ def write_data(response: str) -> None:
         session.commit()
 
 
+def return_data_from_DB(drug_id: int) -> dict:
+    with Session(engine) as session:
+        query = (
+            select(Drug)
+            .where(Drug.id == drug_id)
+            .first()
+        )
+
+        drug = session.execute(query)
+
+        return {
+            'name': drug.name,
+            'dosage': drug.dosage,
+            'pharmacy': drug.pharmacy
+        }
+
+
 def main():
     drug = 'ранвэк'
-    response = make_request(drug)
-    create_DB(engine)
-    write_data(response)
+    make_request(drug)
+    #create_DB(engine)
+    #write_data(response)
 
 
 if __name__ == '__main__':
