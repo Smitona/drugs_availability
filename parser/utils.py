@@ -5,7 +5,7 @@ from datetime import datetime as dt
 
 from sqlalchemy.orm import Session
 
-from models import Base, Drug, Pharmacy, Pharmacy_drug
+from .models import Base, Drug, Pharmacy, Pharmacy_drug
 
 BASE_DIR = Path(__file__).parent
 DB_DIR = BASE_DIR / 'data'

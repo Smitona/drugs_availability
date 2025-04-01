@@ -5,8 +5,8 @@ from datetime import datetime as dt
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from models import Drug, Pharmacy
-from utils import (
+from .models import Drug, Pharmacy
+from .utils import (
     engine, create_DB, add_pharmacy, update_pharmacy_drug_counts, add_drug
 )
 
@@ -28,7 +28,7 @@ def make_request(name: str) -> str:
         result = response.json()['result']
     except Exception:
         print('Актуальные данные недоступны.', response.json()['message'])
-        result = []
+        result = response.json()['message']
     except KeyError:
         time.sleep(5)
         result = response.json()['result']

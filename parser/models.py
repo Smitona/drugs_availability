@@ -1,4 +1,5 @@
-from sqlalchemy import Interval, DateTime, Table, ForeignKey, UniqueConstraint
+from datetime import datetime, timedelta
+from sqlalchemy import Interval, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 
 
@@ -26,7 +27,7 @@ class Pharmacy_drug(Base):
     drug_id: Mapped[int] = mapped_column(
         ForeignKey('drugs.id'), primary_key=True
     )
-    data_time: Mapped[DateTime]
+    data_time: Mapped[datetime]
     regional_count: Mapped[int] = mapped_column(nullable=False, default=0)
     federal_count: Mapped[int] = mapped_column(nullable=False, default=0)
     ssz_count: Mapped[int] = mapped_column(nullable=False, default=0)
@@ -40,7 +41,7 @@ class Pharmacy(Base):
     id: Mapped[int] = mapped_column(
         primary_key=True, nullable=False, autoincrement=True
     )
-    working_time: Mapped[Interval]
+    working_time: Mapped[timedelta]
     phone: Mapped[str]
     subway: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
