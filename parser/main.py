@@ -6,14 +6,17 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .models import Drug, Pharmacy
-from .utils import (
-    engine, create_DB, add_pharmacy, update_pharmacy_drug_counts, add_drug
-)
+from .utils import engine, add_pharmacy, \
+    update_pharmacy_drug_counts, add_drug
+
 
 API_URL = 'https://gorzdrav.spb.ru/_api/api/v2/medication/pharmacies/search?'
 
 
 def make_request(name: str) -> str:
+    """
+    Делает запрос в API и обрабатывает возможные ответы.
+    """
     payload = {
         "nom": name,
         "isLgot": "true",
@@ -37,8 +40,12 @@ def make_request(name: str) -> str:
 
 
 def write_data(response: str) -> None:
+    """
+    Записывает данные в БД по препаратам.
+    """
     for item in response:
-        drug_name = item['drugName']
+        full_name = item['drugName']
+        drug_name = full_name.split()[0]
         pharmacy_name = item['storeName']
         actuality_dt = dt.strptime(item['actualDate'], "%Y-%m-%dT%H:%M:%S")
 
@@ -76,6 +83,12 @@ def write_data(response: str) -> None:
 
 
 def return_data_from_DB(drug_id: int) -> dict:
+    """
+    Отдаёт данные из Бд для польза.
+    name - название препарата
+    dosage - дозировка
+    pharmacy - аптека
+    """
     with Session(engine) as session:
         query = (
             select(Drug)
@@ -91,13 +104,3 @@ def return_data_from_DB(drug_id: int) -> dict:
             'pharmacy': drug.pharmacy
         }
 
-
-def main():
-    drug = 'ранвэк'
-    make_request(drug)
-    #create_DB(engine)
-    #write_data(response)
-
-
-if __name__ == '__main__':
-    main()
