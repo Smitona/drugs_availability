@@ -41,7 +41,7 @@ class Pharmacy(Base):
     id: Mapped[int] = mapped_column(
         primary_key=True, nullable=False, autoincrement=True
     )
-    working_time: Mapped[timedelta]
+    #working_time: Mapped[timedelta]
     phone: Mapped[str]
     subway: Mapped[str] = mapped_column(unique=True)
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
