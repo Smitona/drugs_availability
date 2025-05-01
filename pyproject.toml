@@ -14,6 +14,7 @@ sqlalchemy = "^2.0.39"
 psycopg2 = "^2.9.10"
 psycopg2-binary = "^2.9.10"
 aiogram = "^3.19.0"
+aiosqlite = "^0.21.0"
 
 
 [build-system]

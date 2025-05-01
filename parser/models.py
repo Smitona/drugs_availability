@@ -1,6 +1,8 @@
-from datetime import datetime, timedelta
-from sqlalchemy import Interval, ForeignKey, UniqueConstraint
+from datetime import datetime
+from typing import Dict
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.dialects.postgresql import JSONB
 
 
 class Base(DeclarativeBase):
@@ -33,6 +35,9 @@ class Pharmacy_drug(Base):
     ssz_count: Mapped[int] = mapped_column(nullable=False, default=0)
     psychiatry_count: Mapped[int] = mapped_column(nullable=False, default=0)
     refugee_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    diabetic_kids_2_4_count = mapped_column(nullable=False, default=0)
+    diabetic_kids_4_17_count = mapped_column(nullable=False, default=0)
+    hepatitis_count = mapped_column(nullable=False, default=0)
 
 
 class Pharmacy(Base):
@@ -41,11 +46,13 @@ class Pharmacy(Base):
     id: Mapped[int] = mapped_column(
         primary_key=True, nullable=False, autoincrement=True
     )
-    #working_time: Mapped[timedelta]
+    name: Mapped[str] = mapped_column(unique=True, nullable=False)
+    working_time: Mapped[Dict[str, str]] = mapped_column(JSONB, nullable=True)
     phone: Mapped[str]
     subway: Mapped[str] = mapped_column(unique=True)
-    name: Mapped[str] = mapped_column(unique=True, nullable=False)
     address: Mapped[str] = mapped_column(unique=True, nullable=False)
+    district: Mapped[str] = mapped_column(unique=True, nullable=False)
+    route: Mapped[str] = mapped_column(nullable=False)
     drugs: Mapped[list['Drug']] = relationship(
         'Drug', secondary='pharmacy_drug', back_populates='pharmacy'
     )
@@ -74,7 +81,8 @@ class Drug(Base):
     сut_rate: Mapped[bool] = mapped_column(
         server_default='true', nullable=False
     )
-    package: Mapped[str]
+    form: Mapped[str] = mapped_column(nullable=False)
+    numero: Mapped[str]
     pharmacy: Mapped[list['Pharmacy']] = relationship(
         'Pharmacy', secondary='pharmacy_drug', back_populates='drugs'
     )

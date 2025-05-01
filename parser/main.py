@@ -1,4 +1,5 @@
 import requests
+import re
 import time
 import asyncio
 from datetime import datetime as dt
@@ -6,7 +7,7 @@ from datetime import datetime as dt
 from sqlalchemy import select
 
 from models import Drug, Pharmacy
-from utils import async_session_factory, create_tables, \
+from parser.db import async_session_factory, create_tables, \
     add_pharmacy, update_pharmacy_drug_counts, add_drug
 
 
@@ -44,10 +45,16 @@ async def write_data(response: str) -> None:
     Записывает данные в БД по препаратам.
     """
 
-    # Подумать над add_all
     for item in response:
         full_name = item['drugName']
-        drug_name = full_name.split()[0]
+
+        match = re.search(r'^(\w+)[®, ]', full_name)
+
+        if match:
+            drug_name = match.group(1)
+        else:
+            drug_name = full_name.split()[0] if full_name else ""
+
         pharmacy_name = item['storeName']
         actuality_dt = dt.strptime(item['actualDate'], "%Y-%m-%dT%H:%M:%S")
 
@@ -70,7 +77,10 @@ async def write_data(response: str) -> None:
             'federal_count': item['federalCount'],
             'ssz_count': item['sszCount'],
             'psychiatry_count': item['psychiatryCount'],
-            'refugee_count': item['refugeeCount']
+            'refugee_count': item['refugeeCount'],
+            'diabetic_kids_2_4_count': item['diabeticKids24Count'],
+            'diabetic_kids_4_17_count': item['diabeticKids417Count'],
+            'hepatitis_count': item['hepatitisCount']
         }
         await update_pharmacy_drug_counts(
             pharmacy_id, drug_id, actuality_dt, counters
@@ -80,11 +90,14 @@ async def write_data(response: str) -> None:
 async def return_data_from_DB(drug_id: int) -> dict:
     """
     Отдаёт данные из Бд для польза.
-    name - название препарата
-    dosage - дозировка
-    pharmacy - аптека
+
+        Принимает drug_id: id препарата в БД
+
+        name: Название препарата
+        dosage: Дозировка
+        pharmacy: Аптека
     """
-    with async_session_factory() as session:
+    async with async_session_factory() as session:
         query = (
             select(Drug)
             .where(Drug.id == drug_id)

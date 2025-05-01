@@ -15,7 +15,7 @@ router = Router()
 @router.message(CommandStart())
 async def command_start_handler(message: Message) -> None:
     """
-    Приветствует польза и показывает основыне кнопки.
+    Приветствует пользователя и показывает основыне кнопки.
 
     Команда /start
     """
@@ -38,7 +38,6 @@ async def callback_search_drug_handler(
     """
     await callback_query.message.answer("Введите название препарата для поиска.")
     await callback_query.answer()
-
 
 
 @router.callback_query(lambda c: c.data == 'favorite_drugs')
@@ -66,8 +65,10 @@ async def handle_user_input(message: Message) -> None:
     """
 
     drug = str(message.text)
-    response = make_request(drug)
-    result = json.dumps(write_data(response), ensure_ascii=False, indent=2)
+    response = await make_request(drug)
+    result = json.dumps(
+        await write_data(response), ensure_ascii=False, indent=2
+    )
 
     formatted_result = f"<pre>{result}</pre> Попробуйте повторить поиск позже."
 
