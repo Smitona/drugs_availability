@@ -1,8 +1,8 @@
 from datetime import datetime
 from typing import Dict
-from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy import ForeignKey, UniqueConstraint, JSON
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import JSONB
+#from sqlalchemy.dialects.postgresql import JSONB
 
 
 class Base(DeclarativeBase):
@@ -35,9 +35,9 @@ class Pharmacy_drug(Base):
     ssz_count: Mapped[int] = mapped_column(nullable=False, default=0)
     psychiatry_count: Mapped[int] = mapped_column(nullable=False, default=0)
     refugee_count: Mapped[int] = mapped_column(nullable=False, default=0)
-    diabetic_kids_2_4_count = mapped_column(nullable=False, default=0)
-    diabetic_kids_4_17_count = mapped_column(nullable=False, default=0)
-    hepatitis_count = mapped_column(nullable=False, default=0)
+    diabetic_kids_2_4_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    diabetic_kids_4_17_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    hepatitis_count: Mapped[int] = mapped_column(nullable=False, default=0)
 
 
 class Pharmacy(Base):
@@ -47,7 +47,7 @@ class Pharmacy(Base):
         primary_key=True, nullable=False, autoincrement=True
     )
     name: Mapped[str] = mapped_column(unique=True, nullable=False)
-    working_time: Mapped[Dict[str, str]] = mapped_column(JSONB, nullable=True)
+    working_time: Mapped[Dict[str, str]] = mapped_column(JSON, nullable=True)
     phone: Mapped[str]
     subway: Mapped[str] = mapped_column(unique=True)
     address: Mapped[str] = mapped_column(unique=True, nullable=False)

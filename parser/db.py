@@ -36,7 +36,7 @@ async def add_pharmacy(
                     .where(Pharmacy.id == pharmacy_id)
                 )
         if not query.scalar():
-            working_time = parse_schedule(item['storeWorkingTime'])
+            working_time = await parse_schedule(item['storeWorkingTime'])
 
             pharmacy = Pharmacy(
                 name=pharmacy_name,
@@ -83,7 +83,7 @@ async def add_drug(
                 )
 
             if not association_exists.scalar():
-                await session.add(
+                session.add(
                     Pharmacy_drug(
                         pharmacy_id=pharmacy_id,
                         drug_id=drug_id,
@@ -92,7 +92,10 @@ async def add_drug(
                         federal_count=0,
                         ssz_count=0,
                         psychiatry_count=0,
-                        refugee_count=0
+                        refugee_count=0,
+                        diabetic_kids_2_4_count=0,
+                        diabetic_kids_4_17_count=0,
+                        hepatitis_count=0
                     )
                 )
                 await session.commit()
@@ -120,6 +123,26 @@ async def update_pharmacy_drug_counts(
 
         await session.execute(query)
         await session.commit()
+
+
+async def return_data_from_DB(drug_id: int) -> dict:
+    """
+    Отдаёт данные из Бд для польза.
+
+        Принимает drug_id: id препарата в БД
+
+        name: Название препарата
+        dosage: Дозировка
+        pharmacy: Аптека
+    """
+    async with async_session_factory() as session:
+        query = (
+            select(Drug.name,Drug.dosage)
+            .where(Drug.id == drug_id)
+        )
+
+        result = await session.execute(query)
+        drug = result.scalar_one_or_none()
 
 
 async def save_favorite_drug(

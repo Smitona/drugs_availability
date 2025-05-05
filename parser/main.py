@@ -7,7 +7,7 @@ from datetime import datetime as dt
 from sqlalchemy import select
 
 from models import Drug, Pharmacy
-from parser.db import async_session_factory, create_tables, \
+from db import async_session_factory, create_tables, \
     add_pharmacy, update_pharmacy_drug_counts, add_drug
 
 
@@ -85,32 +85,6 @@ async def write_data(response: str) -> None:
         await update_pharmacy_drug_counts(
             pharmacy_id, drug_id, actuality_dt, counters
         )
-
-
-async def return_data_from_DB(drug_id: int) -> dict:
-    """
-    Отдаёт данные из Бд для польза.
-
-        Принимает drug_id: id препарата в БД
-
-        name: Название препарата
-        dosage: Дозировка
-        pharmacy: Аптека
-    """
-    async with async_session_factory() as session:
-        query = (
-            select(Drug)
-            .where(Drug.id == drug_id)
-            .first()
-        )
-
-        drug = await session.execute(query)
-
-        return {
-            'name': drug.name,
-            'dosage': drug.dosage,
-            'pharmacy': drug.pharmacy
-        }
 
 
 async def main() -> None:
