@@ -89,7 +89,7 @@ async def write_data(response: str) -> None:
 
 async def main() -> None:
     await create_tables()
-    response = await make_request('пентаса')
+    response = await make_request('далибра')
     await write_data(response)
 
 

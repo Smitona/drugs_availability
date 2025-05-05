@@ -42,7 +42,7 @@ async def add_pharmacy(
                 name=pharmacy_name,
                 working_time=working_time,
                 phone=item['storePhone'],
-                subway=item['storeRoute'],
+                subway=item['storeSubway'],
                 address=item['storeAddress'],
                 district=item['storeDistrict'],
                 route=item['storeRoute']
