@@ -1,14 +1,14 @@
 import requests
 import re
 import time
-import asyncio
 from datetime import datetime as dt
 
 from sqlalchemy import select
 
 from models import Drug, Pharmacy
-from db import async_session_factory, create_tables, \
-    add_pharmacy, update_pharmacy_drug_counts, add_drug
+from db import async_session_factory, add_pharmacy, add_drug, \
+    update_pharmacy_drug_counts
+from utils import prepare_drug_data
 
 
 API_URL = 'https://gorzdrav.spb.ru/_api/api/v2/medication/pharmacies/search?'
@@ -25,7 +25,8 @@ async def make_request(name: str) -> str:
 
     response = requests.get(
             API_URL,
-            params=payload
+            params=payload,
+            timeout=(2, 5)
         )
 
     try:
@@ -42,35 +43,37 @@ async def make_request(name: str) -> str:
 
 async def write_data(response: str) -> None:
     """
-    Записывает данные в БД по препаратам.
+    Записывает данные в БД по препаратам, используя данные из API.
     """
 
     for item in response:
-        full_name = item['drugName']
+        drug_name, pharmacy_name, actuality_dt = await prepare_drug_data(item)
 
-        match = re.search(r'^(\w+)[®, ]', full_name)
+        async with async_session_factory() as session:
+            pharmacy_result = await session.execute(
+                select(Pharmacy.id).where(Pharmacy.name == pharmacy_name)
+            )
+            pharmacy_id = pharmacy_result.scalar()
 
-        if match:
-            drug_name = match.group(1)
-        else:
-            drug_name = full_name.split()[0] if full_name else ""
+            if not pharmacy_id:
+                await add_pharmacy(item, pharmacy_name)
+                pharmacy_result = await session.execute(
+                    select(Pharmacy.id).where(Pharmacy.name == pharmacy_name)
+                )
+                pharmacy_id = pharmacy_result.scalar()
 
-        pharmacy_name = item['storeName']
-        actuality_dt = dt.strptime(item['actualDate'], "%Y-%m-%dT%H:%M:%S")
+            drug_result = await session.execute(
+                    select(Drug.id).where(
+                        Drug.name == drug_name.lower(),
+                        Drug.dosage == item['dosage']
+                    )
+                )
+            drug_id = drug_result.scalar()
 
-        pharmacy_id = (select(Pharmacy.id)
-                       .where(Pharmacy.name == pharmacy_name)
-                       .scalar_subquery())
-
-        drug_id = (select(Drug.id)
-                   .where(
-                       Drug.name == drug_name,
-                       Drug.dosage == item['dosage']
-                ).scalar_subquery())
-
-        await add_pharmacy(item, pharmacy_name, pharmacy_id)
-
-        await add_drug(item, drug_name, drug_id, pharmacy_id, actuality_dt)
+            if not drug_id:
+                drug_id = await add_drug(
+                    item, drug_name, pharmacy_id, actuality_dt
+                )
 
         counters = {
             'regional_count': item['regionalCount'],
@@ -85,13 +88,3 @@ async def write_data(response: str) -> None:
         await update_pharmacy_drug_counts(
             pharmacy_id, drug_id, actuality_dt, counters
         )
-
-
-async def main() -> None:
-    await create_tables()
-    response = await make_request('пентаса')
-    await write_data(response)
-
-
-if __name__ == "__main__":
-    asyncio.run(main())

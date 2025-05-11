@@ -6,7 +6,7 @@ from aiogram.types import Message
 from aiogram.utils.markdown import hbold
 
 from bot.keyboards import main_menu, favorite_drugs
-from parser.main import make_request, write_data
+from app.main import make_request, write_data
 
 
 router = Router()
