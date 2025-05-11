@@ -78,9 +78,6 @@ class Drug(Base):
     )
     name: Mapped[str] = mapped_column(nullable=False)
     dosage: Mapped[str] = mapped_column(nullable=False)
-    сut_rate: Mapped[bool] = mapped_column(
-        server_default='true', nullable=False
-    )
     form: Mapped[str] = mapped_column(nullable=False)
     numero: Mapped[str]
     pharmacy: Mapped[list['Pharmacy']] = relationship(

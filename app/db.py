@@ -4,6 +4,7 @@ import os
 import re
 from datetime import datetime as dt
 
+from sqlalchemy import func, text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, \
     AsyncSession
 from sqlalchemy.orm import Session, sessionmaker
@@ -28,77 +29,59 @@ async def create_tables() -> None:
 
 
 async def add_pharmacy(
-    item: dict, pharmacy_name: str, pharmacy_id: int
+    item: dict, pharmacy_name: str
 ) -> None:
     async with async_session_factory() as session:
-        query = await session.execute(
-                    select(Pharmacy.id)
-                    .where(Pharmacy.id == pharmacy_id)
-                )
-        if not query.scalar():
-            working_time = await parse_schedule(item['storeWorkingTime'])
+        working_time = await parse_schedule(item['storeWorkingTime'])
 
-            pharmacy = Pharmacy(
-                name=pharmacy_name,
-                working_time=working_time,
-                phone=item['storePhone'],
-                subway=item['storeSubway'],
-                address=item['storeAddress'],
-                district=item['storeDistrict'],
-                route=item['storeRoute']
-            )
+        pharmacy = Pharmacy(
+            name=pharmacy_name,
+            working_time=working_time,
+            phone=item['storePhone'],
+            subway=item['storeSubway'],
+            address=item['storeAddress'],
+            district=item['storeDistrict'],
+            route=item['storeRoute']
+        )
 
-            session.add(pharmacy)
-            await session.commit()
+        session.add(pharmacy)
+        await session.commit()
 
 
 async def add_drug(
-        item: dict, drug_name: str, drug_id: int,
+        item: dict, drug_name: str,
         pharmacy_id: int, actuality_dt: dt
 ) -> None:
     async with async_session_factory() as session:
-        query = await session.execute(
-                    select(Drug.id)
-                    .where(Drug.id == drug_id)
-                )
-        if not query.scalar():
-            package = re.search(r'№(\d+)', item['package']).group(1)
+        package = re.search(r'№(\d+)', item['package']).group(1)
 
-            drug = Drug(
-                name=drug_name,
-                dosage=item['dosage'],
-                сut_rate=item['isLgot'],
-                numero=package,
-                form=item['formOf']
+        drug = Drug(
+            name=drug_name.lower(),
+            dosage=item['dosage'],
+            numero=package,
+            form=item['formOf']
+        )
+        session.add(drug)
+        await session.commit()
+
+        session.add(
+            Pharmacy_drug(
+                pharmacy_id=pharmacy_id,
+                drug_id=drug.id,
+                data_time=actuality_dt,
+                regional_count=0,
+                federal_count=0,
+                ssz_count=0,
+                psychiatry_count=0,
+                refugee_count=0,
+                diabetic_kids_2_4_count=0,
+                diabetic_kids_4_17_count=0,
+                hepatitis_count=0
             )
-            session.add(drug)
-            await session.commit()
+        )
+        await session.commit()
 
-            association_exists = await session.execute(
-                        select(Pharmacy_drug)
-                        .where(
-                            (Pharmacy_drug.pharmacy_id == pharmacy_id) &
-                            (Pharmacy_drug.drug_id == drug_id)
-                        )
-                )
-
-            if not association_exists.scalar():
-                session.add(
-                    Pharmacy_drug(
-                        pharmacy_id=pharmacy_id,
-                        drug_id=drug_id,
-                        data_time=actuality_dt,
-                        regional_count=0,
-                        federal_count=0,
-                        ssz_count=0,
-                        psychiatry_count=0,
-                        refugee_count=0,
-                        diabetic_kids_2_4_count=0,
-                        diabetic_kids_4_17_count=0,
-                        hepatitis_count=0
-                    )
-                )
-                await session.commit()
+        return drug.id
 
 
 async def update_pharmacy_drug_counts(
@@ -115,34 +98,68 @@ async def update_pharmacy_drug_counts(
     """
     async with async_session_factory() as session:
 
-        query = update(Pharmacy_drug).where(
-            Pharmacy_drug.pharmacy_id == pharmacy_id,
-            Pharmacy_drug.drug_id == drug_id,
-            Pharmacy_drug.data_time == actuality_dt
-        ).values(**counters)
+        exists = await session.execute(
+            select(Pharmacy_drug).where(
+                Pharmacy_drug.pharmacy_id == pharmacy_id,
+                Pharmacy_drug.drug_id == drug_id
+            )
+        )
 
-        await session.execute(query)
+        if not exists.scalar():
+            session.add(
+                Pharmacy_drug(
+                    pharmacy_id=pharmacy_id,
+                    drug_id=drug_id,
+                    data_time=actuality_dt,
+                    **counters
+                )
+            )
+
+        else:
+            await session.execute(
+                update(Pharmacy_drug).where(
+                    Pharmacy_drug.pharmacy_id == pharmacy_id,
+                    Pharmacy_drug.drug_id == drug_id,
+                    Pharmacy_drug.data_time == actuality_dt
+                ).values(**counters)
+            )
+
         await session.commit()
 
 
-async def return_data_from_DB(drug_id: int) -> dict:
+async def return_data_from_DB(
+    drug_name: str, dosage: str
+) -> dict:
     """
-    Отдаёт данные из Бд для польза.
+    Отдаёт данные из БД для польза.
 
-        Принимает drug_id: id препарата в БД
+        Принимает
 
-        name: Название препарата
+        drug_name: Название препарата
         dosage: Дозировка
-        pharmacy: Аптека
     """
-    async with async_session_factory() as session:
+    async with async_session_factory() as session:        
         query = (
-            select(Drug.name,Drug.dosage)
-            .where(Drug.id == drug_id)
-        )
+                select(Drug)
+                .where(
+                    (Drug.name == drug_name) &
+                    (Drug.dosage == dosage)
+                )
+            )
 
         result = await session.execute(query)
         drug = result.scalar_one_or_none()
+
+        if drug:
+            # Преобразуем объект Drug в словарь
+            dr = {
+                "name": drug.name,
+                "dosage": drug.dosage,
+                "form": drug.form,
+                "numero": drug.numero
+            }
+            print(dr)
+        return None
 
 
 async def save_favorite_drug(
