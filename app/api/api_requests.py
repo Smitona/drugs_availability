@@ -5,10 +5,10 @@ from datetime import datetime as dt
 
 from sqlalchemy import select
 
-from models import Drug, Pharmacy
-from db import async_session_factory, add_pharmacy, add_drug, \
+from app.api.models import Drug, Pharmacy
+from app.api.db import async_session_factory, add_pharmacy, add_drug, \
     update_pharmacy_drug_counts
-from utils import prepare_drug_data
+from app.api.utils import prepare_drug_data
 
 
 API_URL = 'https://gorzdrav.spb.ru/_api/api/v2/medication/pharmacies/search?'

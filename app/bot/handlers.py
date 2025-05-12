@@ -5,8 +5,9 @@ from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram.utils.markdown import hbold
 
-from bot.keyboards import main_menu, favorite_drugs
-from app.main import make_request, write_data
+from app.bot.keyboards import main_menu, favorite_drugs
+from app.api.db import forms_from_DB
+from app.api.api_requests import make_request, write_data
 
 
 router = Router()
@@ -50,7 +51,7 @@ async def callback_favorite_drugs(
     Команда /favorite_drugs
     """
 
-    # callback должен отдавать ответ из кеша/БД по препарату
+    # callback должен отдавать ответ из БД по препарату
 
     await callback_query.message.edit_text(
         text="Выберите препарат", reply_markup=favorite_drugs
@@ -61,15 +62,13 @@ async def callback_favorite_drugs(
 @router.message()
 async def handle_user_input(message: Message) -> None:
     """
-    Отправляет запрос в API/ищет в кеше.
+    Отправляет запрос в API/ищет в БД.
     """
 
     drug = str(message.text)
     response = await make_request(drug)
-    result = json.dumps(
-        await write_data(response), ensure_ascii=False, indent=2
-    )
+    await write_data(response)
 
-    formatted_result = f"<pre>{result}</pre> Попробуйте повторить поиск позже."
+    result = await forms_from_DB(drug)
 
-    await message.answer(formatted_result, parse_mode="HTML")
+    await message.answer(result)

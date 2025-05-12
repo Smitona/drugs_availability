@@ -1,16 +1,15 @@
-from sqlalchemy import create_engine, exists, update, select
+from sqlalchemy import update, select
 from pathlib import Path
 import os
 import re
 from datetime import datetime as dt
 
-from sqlalchemy import func, text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, \
     AsyncSession
 from sqlalchemy.orm import Session, sessionmaker
 
-from models import Base, Drug, Pharmacy, Pharmacy_drug, User_drug
-from utils import parse_schedule
+from app.api.models import Base, Drug, Pharmacy, Pharmacy_drug, User_drug
+from app.api.utils import parse_schedule
 
 BASE_DIR = Path(__file__).parent
 DB_DIR = BASE_DIR / 'data'
@@ -98,14 +97,14 @@ async def update_pharmacy_drug_counts(
     """
     async with async_session_factory() as session:
 
-        exists = await session.execute(
+        ass_exists = await session.execute(
             select(Pharmacy_drug).where(
                 Pharmacy_drug.pharmacy_id == pharmacy_id,
                 Pharmacy_drug.drug_id == drug_id
             )
         )
 
-        if not exists.scalar():
+        if not ass_exists.scalar():
             session.add(
                 Pharmacy_drug(
                     pharmacy_id=pharmacy_id,
@@ -151,7 +150,6 @@ async def return_data_from_DB(
         drug = result.scalar_one_or_none()
 
         if drug:
-            # Преобразуем объект Drug в словарь
             dr = {
                 "name": drug.name,
                 "dosage": drug.dosage,
@@ -159,6 +157,27 @@ async def return_data_from_DB(
                 "numero": drug.numero
             }
             print(dr)
+        return None
+
+
+async def forms_from_DB(drug_name: str) -> list:
+    async with async_session_factory() as session:
+        query = (
+                select(Drug)
+                .where(Drug.name == drug_name)
+            )
+
+        result = await session.execute(query)
+        drug = result.scalar_one_or_none()
+
+        if drug:
+            dr = {
+                "name": drug.name,
+                "dosage": drug.dosage,
+                "form": drug.form,
+                "numero": drug.numero
+            }
+            return dr
         return None
 
 
