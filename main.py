@@ -32,8 +32,8 @@ dp.include_router(router)
 
 async def main() -> None:
     await create_tables()
-    # await write_data(await make_request('пентаса'))
-    # await return_data_from_DB('ранвэк', '15 мг')
+    await write_data(await make_request('равнэк'))
+    await return_data_from_DB('ранвэк', '15 мг')
 
     await dp.start_polling(bot)
 

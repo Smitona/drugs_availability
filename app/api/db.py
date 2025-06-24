@@ -1,12 +1,10 @@
 from sqlalchemy import update, select
-from pathlib import Path
 import os
 import re
 from datetime import datetime as dt
+from pathlib import Path
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, \
-    AsyncSession
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 from app.api.models import Base, Drug, Pharmacy, Pharmacy_drug, User_drug
 from app.api.utils import parse_schedule
@@ -164,21 +162,23 @@ async def forms_from_DB(drug_name: str) -> list:
     async with async_session_factory() as session:
         query = (
                 select(Drug)
-                .where(Drug.name == drug_name)
+                .where(Drug.name.ilike(f'%{drug_name}%'))
             )
 
         result = await session.execute(query)
-        drug = result.scalar_one_or_none()
+        drugs = result.scalars().all()
 
-        if drug:
-            dr = {
-                "name": drug.name,
-                "dosage": drug.dosage,
-                "form": drug.form,
-                "numero": drug.numero
-            }
-            return dr
-        return None
+        found_drugs = []
+        for drug in drugs:
+            found_drugs.append({
+                'id': drug.id,
+                'name': drug.name,
+                'dosage': drug.dosage,
+                'form': drug.form,
+                'numero': drug.numero
+            })
+
+        return found_drugs
 
 
 async def save_favorite_drug(
