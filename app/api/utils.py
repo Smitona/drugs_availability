@@ -1,9 +1,6 @@
 from datetime import datetime as dt
 import re
 
-from sqlalchemy import select
-from models import Drug, Pharmacy
-
 
 async def parse_schedule(schedule_string):
     schedule_dict = {}
