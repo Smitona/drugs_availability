@@ -2,6 +2,7 @@ import asyncio
 import logging
 import sys
 import os
+import pprint
 
 from dotenv import load_dotenv
 
@@ -33,9 +34,10 @@ dp.include_router(router)
 async def main() -> None:
     await create_tables()
     await write_data(await make_request('равнэк'))
-    await return_data_from_DB('ранвэк', '15 мг')
+    result = await return_data_from_DB('ранвэк', '15 мг')
+    pprint.pprint(result)
 
-    await dp.start_polling(bot)
+    #await dp.start_polling(bot)
 
 
 if __name__ == "__main__":

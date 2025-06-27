@@ -1,4 +1,4 @@
-from sqlalchemy import update, select
+from sqlalchemy import update, select, and_, or_
 import os
 import re
 from datetime import datetime as dt
@@ -134,8 +134,12 @@ async def return_data_from_DB(
 
         drug_name: Название препарата
         dosage: Дозировка
+
+        Возвращает:
+
+        Каунтеры препарата в аптеках с заданной дозировкой dosage.
     """
-    async with async_session_factory() as session:        
+    async with async_session_factory() as session:
         query = (
                 select(Drug)
                 .where(
@@ -148,14 +152,49 @@ async def return_data_from_DB(
         drug = result.scalar_one_or_none()
 
         if drug:
-            dr = {
-                "name": drug.name,
-                "dosage": drug.dosage,
-                "form": drug.form,
-                "numero": drug.numero
-            }
-            print(dr)
-        return None
+            query = (
+                select(Pharmacy, Pharmacy_drug)
+                .join(
+                    Pharmacy,
+                    Pharmacy_drug.pharmacy_id == Pharmacy.id
+                )
+                .where(
+                    and_(
+                        Pharmacy_drug.drug_id == drug.id,
+                        or_(
+                            Pharmacy_drug.regional_count > 0,
+                            Pharmacy_drug.federal_count > 0,
+                            Pharmacy_drug.ssz_count > 0,
+                            Pharmacy_drug.refugee_count > 0,
+                            Pharmacy_drug.diabetic_kids_2_4_count > 0,
+                            Pharmacy_drug.diabetic_kids_4_17_count > 0,
+                            Pharmacy_drug.hepatitis_count > 0
+                        )
+                    )
+                )
+            )
+            result = await session.execute(query)
+            counters = result.all()
+
+        found_pharmacies = []
+        for pharmacy, pharmacy_drug in counters:
+            found_pharmacies.append({
+                'pharm_name': pharmacy.name,
+                'pharm_phone': pharmacy.phone,
+                'pharm_district': pharmacy.district,
+                'pharm_subway': pharmacy.subway,
+                'pharm_loc': pharmacy.address,
+                'pharm_route': pharmacy.route,
+                'regional_count': pharmacy_drug.regional_count,
+                'federal_count': pharmacy_drug.federal_count,
+                'ssz_count': pharmacy_drug.ssz_count,
+                'refugee_count': pharmacy_drug.refugee_count,
+                'diabetic_kids_2_4_count': pharmacy_drug.diabetic_kids_2_4_count,
+                'diabetic_kids_4_17_count': pharmacy_drug.diabetic_kids_4_17_count,
+                'hepatitis_count': pharmacy_drug.hepatitis_count
+            })
+
+        return found_pharmacies
 
 
 async def forms_from_DB(drug_name: str) -> list:

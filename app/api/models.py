@@ -41,6 +41,18 @@ class Pharmacy_drug(Base):
 
 
 class Pharmacy(Base):
+    """
+    Модель аптек.
+
+        name — название с номером
+        working_time - рабочие часы
+        phone — номер аптеки
+        subway — метро, ближайшее к аптеке
+        address — адрес аптеки
+        district — район СПб
+        route — путь до аптеки от метро, включая транспорт
+        drugs — препараты, которые бывают в этой аптеке
+    """
     __tablename__ = 'pharmacies'
 
     id: Mapped[int] = mapped_column(
