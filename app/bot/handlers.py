@@ -176,8 +176,6 @@ async def callback_favorite_drugs(
     Команда /favorite_drugs
     """
 
-    # callback должен отдавать ответ из БД по препарату
-
     await callback_query.message.edit_text(
         text="Выберите препарат", reply_markup=favorite_drugs
     )
