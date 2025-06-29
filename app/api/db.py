@@ -182,13 +182,15 @@ async def return_data_from_DB(
                 'pharm_subway': pharmacy.subway,
                 'pharm_loc': pharmacy.address,
                 'pharm_route': pharmacy.route,
-                'regional_count': pharmacy_drug.regional_count,
-                'federal_count': pharmacy_drug.federal_count,
-                'ssz_count': pharmacy_drug.ssz_count,
-                'refugee_count': pharmacy_drug.refugee_count,
-                'diabetic_kids_2_4_count': pharmacy_drug.diabetic_kids_2_4_count,
-                'diabetic_kids_4_17_count': pharmacy_drug.diabetic_kids_4_17_count,
-                'hepatitis_count': pharmacy_drug.hepatitis_count
+                'pharm_work': pharmacy.working_time,
+                'last_update': pharmacy_drug.data_time,
+                'regional': pharmacy_drug.regional_count,
+                'federal': pharmacy_drug.federal_count,
+                'ssz': pharmacy_drug.ssz_count,
+                'refugee': pharmacy_drug.refugee_count,
+                'diabetic_kids_2_4': pharmacy_drug.diabetic_kids_2_4_count,
+                'diabetic_kids_4_17': pharmacy_drug.diabetic_kids_4_17_count,
+                'hepatitis': pharmacy_drug.hepatitis_count
             })
 
         return found_pharmacies
