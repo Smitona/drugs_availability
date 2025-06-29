@@ -82,8 +82,8 @@ async def add_drug(
 
 
 async def update_pharmacy_drug_counts(
-        pharmacy_id: int, drug_id: int, actuality_dt: dt,
-        counters: dict
+        pharmacy_id: int, drug_id: int,
+        actuality_dt: dt, counters: dict
 ) -> None:
     """
     Обновляет каунтеры в аптеке по препарату.
@@ -125,7 +125,7 @@ async def update_pharmacy_drug_counts(
 
 
 async def return_data_from_DB(
-    drug_name: str, dosage: str
+    drug_id: int
 ) -> dict:
     """
     Отдаёт данные из БД для польза.
@@ -142,10 +142,7 @@ async def return_data_from_DB(
     async with async_session_factory() as session:
         query = (
                 select(Drug)
-                .where(
-                    (Drug.name == drug_name) &
-                    (Drug.dosage == dosage)
-                )
+                .where(Drug.id == drug_id)
             )
 
         result = await session.execute(query)
