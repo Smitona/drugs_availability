@@ -91,7 +91,7 @@ class Drug(Base):
     name: Mapped[str] = mapped_column(nullable=False)
     dosage: Mapped[str] = mapped_column(nullable=False)
     form: Mapped[str] = mapped_column(nullable=False)
-    numero: Mapped[str]
+    numero: Mapped[str] = mapped_column(nullable=False)
     pharmacy: Mapped[list['Pharmacy']] = relationship(
         'Pharmacy', secondary='pharmacy_drug', back_populates='drugs'
     )

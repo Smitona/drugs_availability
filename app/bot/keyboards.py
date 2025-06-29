@@ -67,32 +67,21 @@ def create_drugs_keyboard(
             drug_name = drug.get('name', 'Неизвестно')
             drug_dosage = drug.get('dosage', '')
             drug_form = drug.get('form', '')
+            drug_numero = drug.get('numero', '')
             drug_id = drug.get('id', '')
 
-            button_text = drug_name
-            if drug_dosage:
-                button_text += f" {drug_dosage}"
             if drug_form:
-                button_text += f" ({drug_form})"
+                if len(drug_form) > 30:
+                    drug_form = drug_form.split(' ', 1)[0]
 
-            if len(button_text) > 60:
-                button_text = button_text[:57] + "..."
+            button_text = '{} {} - {} №{}'.format(
+                drug_name, drug_dosage, drug_form, drug_numero
+            )
 
             callback_data = f'drug_{drug_id}'
         else:
             drug_name = str(drug)
             button_text = drug_name
-
-            if len(drug_name) > 40:
-                drug_hash = hashlib.md5(drug_name.encode()).hexdigest()[:10]
-                callback_data = f'drug_h_{drug_hash}'
-            else:
-                clean_name = ''.join(c for c in drug_name if c.isalnum() or c in '_-')
-                callback_data = f'drug_{clean_name}'[:64]
-
-        if len(callback_data.encode('utf-8')) > 64:
-            drug_hash = hashlib.md5(str(drug).encode()).hexdigest()[:10]
-            callback_data = f'drug_h_{drug_hash}'
 
         keyboard_buttons.append([
             InlineKeyboardButton(
