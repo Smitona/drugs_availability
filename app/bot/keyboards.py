@@ -1,5 +1,4 @@
 from typing import List
-import hashlib
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 main_menu = InlineKeyboardMarkup(
@@ -34,6 +33,15 @@ favorite_drugs = InlineKeyboardMarkup(
             )]
         ]
     )
+
+# Надо забирать id препарата и сохранять в БД связь id-id
+add_to_favorite = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [InlineKeyboardButton(
+                text='Сохранить в избранное поиск', callback_data='drug_'
+            )]
+        ]
+)
 
 
 def create_drugs_keyboard(
@@ -78,7 +86,7 @@ def create_drugs_keyboard(
                 drug_name, drug_dosage, drug_form, drug_numero
             )
 
-            callback_data = f'drug_{drug_id}'
+            callback_data = f'drug_{drug_id}_{button_text}'
         else:
             drug_name = str(drug)
             button_text = drug_name

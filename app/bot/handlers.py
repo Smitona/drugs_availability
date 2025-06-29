@@ -1,6 +1,5 @@
-import json
-
 from aiogram import Router, types, F
+from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 from aiogram.utils.markdown import hbold
@@ -10,7 +9,8 @@ from aiogram.fsm.context import FSMContext
 from app.api.db import forms_from_DB, return_data_from_DB
 from app.api.api_requests import make_request, write_data
 from app.bot.keyboards import main_menu, favorite_drugs, search_cancel, \
-    create_drugs_keyboard
+    create_drugs_keyboard, add_to_favorite
+from app.bot.utils import prettify_info
 
 
 router = Router()
@@ -29,9 +29,9 @@ async def command_start_handler(message: Message) -> None:
     Команда /start
     """
     await message.answer(
-        f"""
+        f'''
         Здравствуйте, {hbold(message.from_user.full_name)}!
-        """,
+        ''',
         reply_markup=main_menu
     )
 
@@ -68,19 +68,6 @@ async def cancel_drug_search(
     await callback_query.answer()
 
 
-@router.callback_query(F.data == 'close_search')
-async def close_search_results(
-    callback_query: types.CallbackQuery,
-    state: FSMContext
-) -> None:
-    """
-    Завершение поиска
-    """
-    await state.clear()
-    await callback_query.message.edit_text('✅ Поиск завершен')
-    await callback_query.answer()
-
-
 @router.message(DrugSearchStates.waiting_for_drug_name)
 async def process_drug_search(
     message: Message, state: FSMContext
@@ -110,15 +97,17 @@ async def process_drug_search(
             )
         else:
             await message.answer(
-                f'❌ По запросу "{drug_name}" ничего не найдено.\n'
-                'Попробуйте изменить запрос или проверьте правильность написания.',
+                f'''
+                ❌ По запросу "{drug_name}" ничего не найдено.
+                Попробуйте изменить запрос или проверьте правильность написания.
+                ''',
                 reply_markup=main_menu
             )
 
     except Exception as e:
         await loading_message.delete()
         await message.answer(
-            "❌ Произошла ошибка при поиске. Попробуйте еще раз.",
+            '❌ Произошла ошибка при поиске. Попробуйте еще раз.',
             reply_markup=main_menu
         )
         print(f"Ошибка поиска препаратов: {e}")
@@ -157,11 +146,13 @@ async def handle_drug_selection(
     await state.set_state(DrugSearchStates.waiting_for_drug_form)
 
     drug_id = callback_query.data.split('_')[1]
+    drug = callback_query.data.split('_')[2]
     loading_message = await callback_query.message.answer(
             '🔍 Ищу по аптекам...'
         )
 
-    drug_info = await return_data_from_DB(drug_id)
+    raw_drug_info = await return_data_from_DB(drug_id)
+    drug_info = await prettify_info(raw_drug_info)
 
     await state.update_data(
             search_results=drug_info, search_query=drug_id
@@ -171,7 +162,11 @@ async def handle_drug_selection(
 
     if drug_info:
         await callback_query.message.answer(
-            f"Информация о препарате:\n{drug_info}"
+            f'''
+            Наличие <b>{drug}</b>:\n{drug_info}
+            ''',
+            parse_mode=ParseMode.HTML,
+            reply_markup=add_to_favorite
         )
     else:
         await callback_query.message.answer("Произошла ошибка поиска в базе.")
