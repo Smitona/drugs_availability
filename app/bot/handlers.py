@@ -29,9 +29,9 @@ async def command_start_handler(message: Message) -> None:
     Команда /start
     """
     await message.answer(
-        f'''
-        Здравствуйте, {hbold(message.from_user.full_name)}!
-        ''',
+        text=(
+            f'Здравствуйте, {hbold(message.from_user.full_name)}!'
+        ),
         reply_markup=main_menu
     )
 
@@ -97,10 +97,10 @@ async def process_drug_search(
             )
         else:
             await message.answer(
-                f'''
-                ❌ По запросу "{drug_name}" ничего не найдено.
-                Попробуйте изменить запрос или проверьте правильность написания.
-                ''',
+                text=(
+                    f'❌ По запросу "{drug_name}" ничего не найдено.\n'
+                    'Попробуйте изменить запрос или проверьте правильность написания.'
+                ),
                 reply_markup=main_menu
             )
 
@@ -162,9 +162,10 @@ async def handle_drug_selection(
 
     if drug_info:
         await callback_query.message.answer(
-            f'''
-            Наличие <b>{drug}</b>:\n{drug_info}
-            ''',
+            text=(
+                f'Наличие <b>{drug}</b>:\n'
+                f'{drug_info}'
+            ),
             parse_mode=ParseMode.HTML,
             reply_markup=add_to_favorite
         )
