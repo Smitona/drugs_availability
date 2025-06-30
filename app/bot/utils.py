@@ -1,4 +1,5 @@
 from typing import List
+from datetime import datetime as dt
 
 spb_metro = {
     "Красная": [
@@ -57,25 +58,36 @@ def get_station_emoji(station_name: str) -> str:
     return '🚃'
 
 
+def format_update_time(last_update) -> str:
+    """Форматирует время обновления для отображения"""
+    months = [
+        'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+        'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
+    ]
+
+    time = dt.strptime(str(last_update).split('.')[0], '%Y-%m-%d %H:%M:%S')
+
+    return '{} {} {} {:02d}:{:02d}'.format(
+        time.day, months[time.month], time.year, time.hour, time.minute
+    )
+
+
 async def prettify_info(data: List[dict]):
     """
-        Форматирует данные из БД для сообщения пользователю. 
+        Форматирует данные из БД для сообщения пользователю.
     """
     answer = ''
     for d in data:
         #maps_url = 'https://yandex.ru/maps/-/CHgsnI~0'
         color = get_station_emoji(d['pharm_subway'])
-        #last_update_str = d['last_update'].strftime('%d.%m.%Y %H:%M')
-        result = '''\n<b>{name}</b>, {loc}
-Региональная льгота — {reg} шт.
-<i>Данные от {time}</i>
-
-<blockquote>Район {distr},{c}{sub}</blockquote>
-        '''.format(
-            name=d['pharm_name'], loc=d['pharm_loc'],
-            reg=d['regional'], time=d['last_update'],
-            distr=d['pharm_district'], c=color, sub=d['pharm_subway']
-                )
+        time = format_update_time(d['last_update'])
+        result = (
+            f'\n<b>{d['pharm_name']}</b>, {d['pharm_loc']}\n'
+            f'Региональная льгота — {d['regional']} шт.\n'
+            f'<i>Данные от {time}</i>\n'
+            f'<blockquote>{d['pharm_district']} район,'
+            f'{color} {d['pharm_subway']}</blockquote>\n'
+        )
         answer += result
 
     return answer
