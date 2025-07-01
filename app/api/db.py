@@ -27,7 +27,7 @@ async def create_tables() -> None:
 
 async def add_pharmacy(
     session, item: dict, pharmacy_name: str
-) -> None:
+) -> int:
     working_time = await parse_schedule(item['storeWorkingTime'])
     phone = item['storePhone'].replace("-", "")
 
@@ -49,7 +49,7 @@ async def add_pharmacy(
 
 async def add_drug(
         session, item: dict, drug_name: str
-) -> None:
+) -> int:
     package = re.search(r'№(\d+)', item['package']).group(1)
 
     drug = Drug(
@@ -111,23 +111,15 @@ async def return_data_from_DB(
 
         Принимает
 
-        drug_name: Название препарата
-        dosage: Дозировка
+        drug_id: препарата
 
         Возвращает:
 
         Каунтеры препарата в аптеках с заданной дозировкой dosage.
     """
     async with async_session_factory() as session:
-        query = (
-                select(Drug)
-                .where(Drug.id == drug_id)
-            )
 
-        result = await session.execute(query)
-        drug = result.scalar_one_or_none()
-
-        if drug:
+        if drug_id:
             query = (
                 select(Pharmacy, Pharmacy_drug)
                 .join(
@@ -136,7 +128,7 @@ async def return_data_from_DB(
                 )
                 .where(
                     and_(
-                        Pharmacy_drug.drug_id == drug.id,
+                        Pharmacy_drug.drug_id == drug_id,
                         or_(
                             Pharmacy_drug.regional_count > 0,
                             Pharmacy_drug.federal_count > 0,
@@ -177,10 +169,11 @@ async def return_data_from_DB(
 
 async def forms_from_DB(drug_name: str) -> list:
     async with async_session_factory() as session:
-        query = (
-                select(Drug)
-                .where(Drug.name.ilike(f'%{drug_name}%'))
-            )
+        query = select(Drug).where(
+            Drug.name.ilike(f'%{drug_name}%')
+        )
+        #text("name % :pattern")  # Оператор % из pg_trgm
+        #).params(pattern=f"%{drug_name}%")
 
         result = await session.execute(query)
         drugs = result.scalars().all()

@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Dict
-from sqlalchemy import ForeignKey, UniqueConstraint, JSON
+from sqlalchemy import ForeignKey, UniqueConstraint, JSON, Index
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped, mapped_column
 #from sqlalchemy.dialects.postgresql import JSONB
 
@@ -38,6 +38,17 @@ class Pharmacy_drug(Base):
     diabetic_kids_2_4_count: Mapped[int] = mapped_column(nullable=False, default=0)
     diabetic_kids_4_17_count: Mapped[int] = mapped_column(nullable=False, default=0)
     hepatitis_count: Mapped[int] = mapped_column(nullable=False, default=0)
+
+    __table_args__ = (
+        Index('idx_drug_id', 'drug_id'),
+        Index(
+            'idx_counters',
+            'regional_count', 'federal_count', 'ssz_count',
+            'psychiatry_count', 'refugee_count', 'diabetic_kids_2_4_count',
+            'diabetic_kids_4_17_count', 'hepatitis_count'
+        ),
+        Index('idx_pharmacy_drug', 'drug_id', 'pharmacy_id')
+    )
 
 
 class Pharmacy(Base):
@@ -101,4 +112,11 @@ class Drug(Base):
 
     __table_args__ = (
         UniqueConstraint('name', 'dosage', name='uq_drug_name_dosage'),
+        Index('idx_id', 'id'),
+        Index('idx_name_pattern', 'name')
+        #Index(
+           # 'idx_drug_name_gin_trgm',
+          #  text(text("name gin_trgm_ops"),  # Для PostgreSQL
+           # postgresql_using='gin'
+        #),
     )

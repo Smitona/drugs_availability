@@ -22,23 +22,28 @@ search_cancel = InlineKeyboardMarkup(
 )
 
 
+def fav_drugs_keyboard(drug_id: int) -> InlineKeyboardMarkup:
 # заглушка для ручного тестирования
-favorite_drugs = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(
-                text='Ранвэк', callback_data='ранвэк'
-            )],
-            [InlineKeyboardButton(
-                text='Пентаса', callback_data='пентаса'
-            )]
-        ]
-    )
+    favorite_drugs = InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(
+                    text='{drug_name}', callback_data='drug_{drug_id}'
+                )],
+                [InlineKeyboardButton(
+                    text='{drug_name}', callback_data='drug_{drug_id}'
+                )]
+            ]
+        )
+    
+    favorite_drugs
+
 
 # Надо забирать id препарата и сохранять в БД связь id-id
 add_to_favorite = InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(
-                text='Сохранить в избранное поиск', callback_data='drug_'
+                text='Сохранить в избранное поиск',
+                callback_data='drug_{drug_id}_{chat.id}'
             )]
         ]
 )
