@@ -50,17 +50,14 @@ async def write_data(response: str) -> None:
         drug_name, pharmacy_name, actuality_dt = await prepare_drug_data(item)
 
         async with async_session_factory() as session:
+
             pharmacy_result = await session.execute(
                 select(Pharmacy.id).where(Pharmacy.name == pharmacy_name)
             )
             pharmacy_id = pharmacy_result.scalar()
 
             if not pharmacy_id:
-                await add_pharmacy(item, pharmacy_name)
-                pharmacy_result = await session.execute(
-                    select(Pharmacy.id).where(Pharmacy.name == pharmacy_name)
-                )
-                pharmacy_id = pharmacy_result.scalar()
+                pharmacy_id = await add_pharmacy(session, item, pharmacy_name)
 
             drug_result = await session.execute(
                     select(Drug.id).where(
@@ -72,19 +69,21 @@ async def write_data(response: str) -> None:
 
             if not drug_id:
                 drug_id = await add_drug(
-                    item, drug_name, pharmacy_id, actuality_dt
+                    session, item, drug_name
                 )
 
-        counters = {
-            'regional_count': item['regionalCount'],
-            'federal_count': item['federalCount'],
-            'ssz_count': item['sszCount'],
-            'psychiatry_count': item['psychiatryCount'],
-            'refugee_count': item['refugeeCount'],
-            'diabetic_kids_2_4_count': item['diabeticKids24Count'],
-            'diabetic_kids_4_17_count': item['diabeticKids417Count'],
-            'hepatitis_count': item['hepatitisCount']
-        }
-        await update_pharmacy_drug_counts(
-            pharmacy_id, drug_id, actuality_dt, counters
-        )
+            counters = {
+                'regional_count': item['regionalCount'],
+                'federal_count': item['federalCount'],
+                'ssz_count': item['sszCount'],
+                'psychiatry_count': item['psychiatryCount'],
+                'refugee_count': item['refugeeCount'],
+                'diabetic_kids_2_4_count': item['diabeticKids24Count'],
+                'diabetic_kids_4_17_count': item['diabeticKids417Count'],
+                'hepatitis_count': item['hepatitisCount']
+            }
+            await update_pharmacy_drug_counts(
+                session, pharmacy_id, drug_id, actuality_dt, counters
+            )
+
+            await session.commit()

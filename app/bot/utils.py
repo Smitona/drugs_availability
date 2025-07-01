@@ -61,7 +61,7 @@ def get_station_emoji(station_name: str) -> str:
 def format_update_time(last_update) -> str:
     """Форматирует время обновления для отображения"""
     months = [
-        'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
+        '', 'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
         'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
     ]
 
@@ -86,13 +86,18 @@ async def prettify_info(data: List[dict]):
         maps_url = get_maps_url(d['pharm_loc'])
         color = get_station_emoji(d['pharm_subway'])
         time = format_update_time(d['last_update'])
+        phone = '+7812' + d['pharm_phone']
         result = (
             f'\n<b>{d['pharm_name']}</b>, '
             f'<a href="{maps_url}">📍{d['pharm_loc']}</a>\n'
             f'Региональная льгота — {d['regional']} шт.\n'
             f'<i>Данные от {time}</i>\n'
+            f'☎️ {phone}'
             f'<blockquote>{d['pharm_district']} район, '
-            f'{color} {d['pharm_subway']}</blockquote>\n'
+            f'{color} {d['pharm_subway']}\n'
+            f'Расписание работы льготного отдела:\n'
+            f'{d['pharm_work']}'
+            f'</blockquote>\n'
         )
         answer += result
 
