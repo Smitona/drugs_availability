@@ -26,63 +26,47 @@ async def create_tables() -> None:
 
 
 async def add_pharmacy(
-    item: dict, pharmacy_name: str
-) -> None:
-    async with async_session_factory() as session:
-        working_time = await parse_schedule(item['storeWorkingTime'])
+    session, item: dict, pharmacy_name: str
+) -> int:
+    working_time = await parse_schedule(item['storeWorkingTime'])
+    phone = item['storePhone'].replace("-", "")
 
-        pharmacy = Pharmacy(
-            name=pharmacy_name,
-            working_time=working_time,
-            phone=item['storePhone'],
-            subway=item['storeSubway'],
-            address=item['storeAddress'],
-            district=item['storeDistrict'],
-            route=item['storeRoute']
-        )
+    pharmacy = Pharmacy(
+        name=pharmacy_name,
+        working_time=working_time,
+        phone=phone,
+        subway=item['storeSubway'],
+        address=item['storeAddress'],
+        district=item['storeDistrict'],
+        route=item['storeRoute']
+    )
 
-        session.add(pharmacy)
-        await session.commit()
+    session.add(pharmacy)
+    await session.flush()
+
+    return pharmacy.id
 
 
 async def add_drug(
-        item: dict, drug_name: str,
-        pharmacy_id: int, actuality_dt: dt
-) -> None:
-    async with async_session_factory() as session:
-        package = re.search(r'№(\d+)', item['package']).group(1)
+        session, item: dict, drug_name: str
+) -> int:
+    package = re.search(r'№(\d+)', item['package']).group(1)
 
-        drug = Drug(
-            name=drug_name.lower(),
-            dosage=item['dosage'],
-            numero=package,
-            form=item['formOf']
-        )
-        session.add(drug)
-        await session.commit()
+    drug = Drug(
+        name=drug_name.lower(),
+        dosage=item['dosage'],
+        numero=package,
+        form=item['formOf']
+    )
+    session.add(drug)
 
-        session.add(
-            Pharmacy_drug(
-                pharmacy_id=pharmacy_id,
-                drug_id=drug.id,
-                data_time=actuality_dt,
-                regional_count=0,
-                federal_count=0,
-                ssz_count=0,
-                psychiatry_count=0,
-                refugee_count=0,
-                diabetic_kids_2_4_count=0,
-                diabetic_kids_4_17_count=0,
-                hepatitis_count=0
-            )
-        )
-        await session.commit()
+    await session.flush()
 
-        return drug.id
+    return drug.id
 
 
 async def update_pharmacy_drug_counts(
-        pharmacy_id: int, drug_id: int,
+        session, pharmacy_id: int, drug_id: int,
         actuality_dt: dt, counters: dict
 ) -> None:
     """
@@ -93,35 +77,30 @@ async def update_pharmacy_drug_counts(
     actuality_dt: дата обновленя информации по количеству, значение из API
     counters: словарь с количеством препарата в аптеке по разным льготам
     """
-    async with async_session_factory() as session:
 
-        ass_exists = await session.execute(
-            select(Pharmacy_drug).where(
-                Pharmacy_drug.pharmacy_id == pharmacy_id,
-                Pharmacy_drug.drug_id == drug_id
+    ass = await session.execute(
+        select(Pharmacy_drug).where(
+            Pharmacy_drug.pharmacy_id == pharmacy_id,
+            Pharmacy_drug.drug_id == drug_id
+        )
+    )
+
+    ass_exists = ass.scalar_one_or_none()
+
+    if not ass_exists:
+        session.add(
+            Pharmacy_drug(
+                pharmacy_id=pharmacy_id,
+                drug_id=drug_id,
+                data_time=actuality_dt,
+                **counters
             )
         )
 
-        if not ass_exists.scalar():
-            session.add(
-                Pharmacy_drug(
-                    pharmacy_id=pharmacy_id,
-                    drug_id=drug_id,
-                    data_time=actuality_dt,
-                    **counters
-                )
-            )
-
-        else:
-            await session.execute(
-                update(Pharmacy_drug).where(
-                    Pharmacy_drug.pharmacy_id == pharmacy_id,
-                    Pharmacy_drug.drug_id == drug_id,
-                    Pharmacy_drug.data_time == actuality_dt
-                ).values(**counters)
-            )
-
-        await session.commit()
+    else:
+        for field, value in counters.items():
+            setattr(ass_exists, field, value)
+            ass_exists.data_time = actuality_dt
 
 
 async def return_data_from_DB(
@@ -132,23 +111,15 @@ async def return_data_from_DB(
 
         Принимает
 
-        drug_name: Название препарата
-        dosage: Дозировка
+        drug_id: препарата
 
         Возвращает:
 
         Каунтеры препарата в аптеках с заданной дозировкой dosage.
     """
     async with async_session_factory() as session:
-        query = (
-                select(Drug)
-                .where(Drug.id == drug_id)
-            )
 
-        result = await session.execute(query)
-        drug = result.scalar_one_or_none()
-
-        if drug:
+        if drug_id:
             query = (
                 select(Pharmacy, Pharmacy_drug)
                 .join(
@@ -157,7 +128,7 @@ async def return_data_from_DB(
                 )
                 .where(
                     and_(
-                        Pharmacy_drug.drug_id == drug.id,
+                        Pharmacy_drug.drug_id == drug_id,
                         or_(
                             Pharmacy_drug.regional_count > 0,
                             Pharmacy_drug.federal_count > 0,
@@ -198,10 +169,11 @@ async def return_data_from_DB(
 
 async def forms_from_DB(drug_name: str) -> list:
     async with async_session_factory() as session:
-        query = (
-                select(Drug)
-                .where(Drug.name.ilike(f'%{drug_name}%'))
-            )
+        query = select(Drug).where(
+            Drug.name.ilike(f'%{drug_name}%')
+        )
+        #text("name % :pattern")  # Оператор % из pg_trgm
+        #).params(pattern=f"%{drug_name}%")
 
         result = await session.execute(query)
         drugs = result.scalars().all()
