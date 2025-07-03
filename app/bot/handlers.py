@@ -8,7 +8,7 @@ from aiogram.fsm.context import FSMContext
 
 from app.api.db import forms_from_DB, return_data_from_DB
 from app.api.api_requests import make_request, write_data
-from app.bot.keyboards import main_menu, favorite_drugs, search_cancel, \
+from app.bot.keyboards import main_menu, fav_drugs_keyboard, search_cancel, \
     create_drugs_keyboard, add_to_favorite
 from app.bot.utils import prettify_info
 

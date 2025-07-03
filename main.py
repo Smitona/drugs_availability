@@ -32,7 +32,7 @@ dp.include_router(router)
 
 async def main() -> None:
     #await create_tables()
-    await write_data(await make_request('равнэк'))
+    #await write_data(await make_request('равнэк'))
     #await write_data(await make_request('пентаса'))
 
     await dp.start_polling(bot)
