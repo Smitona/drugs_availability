@@ -1,7 +1,6 @@
 from typing import List
-from datetime import datetime as dt
 
-spb_metro = {
+SPB_METRO = {
     "Красная": [
         "Девяткино", "Гражданский проспект", "Академическая",
         "Политехническая", "Площадь Мужества", "Лесная", "Выборгская",
@@ -38,7 +37,7 @@ spb_metro = {
     ]
 }
 
-emodji = {
+EMODJI = {
     "Красная": "🔴",
     "Синяя": "🔵",
     "Зелёная": "🟢",
@@ -46,59 +45,109 @@ emodji = {
     "Фиолетовая": "🟣"
 }
 
+BENEFIT_NAMES = {
+        'regional': 'Региональная льгота',
+        'federal': 'Федеральная льгота',
+        'ssz': 'Сердечно-сосудистые заболевания',
+        'psychiatry': 'Психиатрическая льгота',
+        'refugee': 'Льгота для беженцев',
+        'diabetic_kids_2_4': 'Дети с диабетом 2-4 года',
+        'diabetic_kids_4_17': 'Дети с диабетом 4-17 лет',
+        'hepatitis': 'Гепатит'
+    }
 
-def get_station_emoji(station_name: str) -> str:
+
+async def get_station_emoji(station_name: str) -> str:
     """
     Возвращает эмодзи цвета ветки по названию станции.
     """
-    for line_color, stations in spb_metro.items():
+    for line_color, stations in SPB_METRO.items():
         if station_name in stations:
-            return emodji.get(line_color, '⚪️')
+            return EMODJI.get(line_color, '⚪️')
 
     return '🚃'
 
 
-def format_update_time(last_update) -> str:
+async def format_update_time(last_update) -> str:
     """Форматирует время обновления для отображения"""
-    months = [
+    months = (
         '', 'января', 'февраля', 'марта', 'апреля', 'мая', 'июня',
         'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'
-    ]
-
-    time = dt.strptime(str(last_update).split('.')[0], '%Y-%m-%d %H:%M:%S')
+    )
 
     return '{} {} {} {:02d}:{:02d}'.format(
-        time.day, months[time.month], time.year, time.hour, time.minute
+        last_update.day, months[last_update.month],
+        last_update.year, last_update.hour, last_update.minute
     )
 
 
-def get_maps_url(address: str) -> str:
+async def get_maps_url(address: str) -> str:
     main_url = 'https://maps.yandex.ru/maps/?text='
     return main_url + address
 
 
-async def prettify_info(data: List[dict]):
-    """
-        Форматирует данные из БД для сообщения пользователю.
-    """
-    answer = ''
-    for d in data:
-        maps_url = get_maps_url(d['pharm_loc'])
-        color = get_station_emoji(d['pharm_subway'])
-        time = format_update_time(d['last_update'])
-        phone = '+7812' + d['pharm_phone']
-        result = (
-            f'\n<b>{d['pharm_name']}</b>, '
-            f'<a href="{maps_url}">📍{d['pharm_loc']}</a>\n'
-            f'Региональная льгота — {d['regional']} шт.\n'
-            f'<i>Данные от {time}</i>\n'
-            f'☎️ {phone}'
-            f'<blockquote>{d['pharm_district']} район, '
-            f'{color} {d['pharm_subway']}\n'
-            f'Расписание работы льготного отдела:\n'
-            f'{d['pharm_work']}'
-            f'</blockquote>\n'
-        )
-        answer += result
+async def format_benefits(pharmacy: dict) -> str:
+    """Форматирует строку с льготами"""
+    benefits = [
+        f'{BENEFIT_NAMES[key]} - <b>{count} шт.</b>'
+        for key, count in pharmacy.items()
+        if key in BENEFIT_NAMES and count > 0
+    ]
+    return '\n'.join(benefits)
 
-    return answer
+
+async def prepare_pharmacy_data(data: List[dict]) -> List[dict]:
+    """
+    Подготавливает и форматирует данные аптек.
+    Возвращает список словарей с отформатированными данными.
+    """
+    formatted_data = []
+    for d in data:
+        formatted_data.append({
+            'name': d['pharm_name'],
+            'maps_url': await get_maps_url(d['pharm_loc']),
+            'location': d['pharm_loc'],
+            'district': d['pharm_district'],
+            'subway': f"{await get_station_emoji(d['pharm_subway'])} {d['pharm_subway']}",
+            'phone': '+7812' + d['pharm_phone'],
+            'time': await format_update_time(d['last_update']),
+            'schedule': '\n'.join(
+                f'• {day}: {time}'
+                for day, time in d['pharm_work'].items()
+                if time != '0:00-0:00'
+            ),
+            'benefits': await format_benefits(d),
+            'separator': "┅" * 20
+        })
+    return formatted_data
+
+
+async def build_pharmacy_message(pharmacy_data: dict) -> str:
+    """
+    Собирает сообщение из подготовленных данных.
+    Принимает словарь с отформатированными данными одной аптеки.
+    """
+    return (
+        f'\n<b>{pharmacy_data["name"]}</b>, '
+        f'<a href="{pharmacy_data["maps_url"]}">'
+        f'📍{pharmacy_data["location"]}</a>\n'
+        f'{pharmacy_data["district"]} район, '
+        f'{pharmacy_data["subway"]}\n'
+        f'☎️ {pharmacy_data["phone"]}\n'
+        f'<i>Данные от {pharmacy_data["time"]}</i>\n'
+        f'<blockquote expandable>'
+        f'{pharmacy_data["benefits"]}\n'
+        f'\n Расписание работы льготного отдела:\n'
+        f'{pharmacy_data["schedule"]}'
+        f'</blockquote>\n'
+        f'{pharmacy_data["separator"]}'
+    )
+
+
+async def prettify_info(data: List[dict]) -> str:
+    """
+    Подготавливает данные и собирает сообщения.
+    """
+    formatted_data = await prepare_pharmacy_data(data)
+    messages = [await build_pharmacy_message(d) for d in formatted_data]
+    return ''.join(messages)
