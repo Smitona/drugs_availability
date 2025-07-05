@@ -6,10 +6,10 @@ from aiogram.utils.markdown import hbold
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 
-from app.api.db import forms_from_DB, return_data_from_DB
+from app.api.db import forms_from_DB, return_data_from_DB, save_favorite_drug
 from app.api.api_requests import make_request, write_data
-from app.bot.keyboards import main_menu, fav_drugs_keyboard, search_cancel, \
-    create_drugs_keyboard, add_to_favorite
+from app.bot.keyboards import main_menu, search_cancel, \
+    create_drugs_keyboard, add_fav_drugs_keyboard
 from app.bot.utils import prettify_info
 
 
@@ -93,7 +93,7 @@ async def process_drug_search(
         if found_drugs:
             await message.answer(
                 text='Найденные формы:',
-                reply_markup=create_drugs_keyboard(found_drugs, page=0)
+                reply_markup=await create_drugs_keyboard(found_drugs, page=0)
             )
         else:
             await message.answer(
@@ -127,7 +127,7 @@ async def handle_drugs_pagination(
     drugs_list = data.get('search_results', [])
 
     if drugs_list:
-        new_keyboard = create_drugs_keyboard(drugs_list, page=page)
+        new_keyboard = await create_drugs_keyboard(drugs_list, page=page)
         await callback_query.message.edit_reply_markup(
             reply_markup=new_keyboard
         )
@@ -145,8 +145,9 @@ async def handle_drug_selection(
     """
     await state.set_state(DrugSearchStates.waiting_for_drug_form)
 
-    drug_id = callback_query.data.split('_')[1]
+    drug_id = int(callback_query.data.split('_')[1])
     drug = callback_query.data.split('_')[2]
+    user_id = callback_query.from_user.id
     loading_message = await callback_query.message.answer(
             '🔍 Ищу по аптекам...'
         )
@@ -167,7 +168,7 @@ async def handle_drug_selection(
                 f'{drug_info}'
             ),
             parse_mode=ParseMode.HTML,
-            reply_markup=add_to_favorite
+            reply_markup=await add_fav_drugs_keyboard(user_id, drug_id)
         )
     else:
         await callback_query.message.answer("Произошла ошибка поиска в базе.")
@@ -180,17 +181,43 @@ async def handle_current_page(
     await callback.answer('Текущая страница')
 
 
+@router.callback_query(F.data.startswith('add_fav_'))
+async def handle_add_to_favorite(
+    callback_query: types.CallbackQuery,
+) -> None:
+    """
+    Сохраняет в БД препарат и форму за пользователем.
+    """
+    try:
+        drug_id = int(callback_query.data.split('_')[2])
+
+        user_id = callback_query.from_user.id
+
+        result = await save_favorite_drug(user_id, drug_id)
+
+        if result:
+            await callback_query.answer("Препарат добавлен в избранное ✅")
+    except Exception as e:
+        await callback_query.answer("Произошла ошибка, попробуйте позже ❌")
+        print(f"Ошибка при добавлении в избранное: {e}")
+
+
 @router.callback_query(F.data == 'favorite_drugs')
 async def callback_favorite_drugs(
-    callback_query: types.CallbackQuery
+    callback_query: types.CallbackQuery,
+    state: FSMContext
 ) -> None:
     """
     Выводит на кнопках сохранённые пользом препараты.
 
     Команда /favorite_drugs
     """
+    page = int(callback_query.data.split('_')[-1])
+
+    data = await state.get_data()
+    drugs_list = data.get('search_results', [])
 
     await callback_query.message.edit_text(
-        text="Выберите препарат", reply_markup=favorite_drugs
+        text="Выберите препарат", reply_markup=await favorite_drugs
     )
     await callback_query.answer()
