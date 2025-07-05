@@ -1,5 +1,6 @@
 from typing import List
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from app.api.db import is_favorite_drug
 
 main_menu = InlineKeyboardMarkup(
         inline_keyboard=[
@@ -22,34 +23,48 @@ search_cancel = InlineKeyboardMarkup(
 )
 
 
-def fav_drugs_keyboard(drug_id: int) -> InlineKeyboardMarkup:
+async def fav_drugs_keyboard(user_id: int) -> InlineKeyboardMarkup:
 # заглушка для ручного тестирования
     favorite_drugs = InlineKeyboardMarkup(
             inline_keyboard=[
                 [InlineKeyboardButton(
-                    text='{drug_name}', callback_data='drug_{drug_id}'
+                    text='{drug_name}', callback_data=f'drug_{drug_id}'
                 )],
                 [InlineKeyboardButton(
-                    text='{drug_name}', callback_data='drug_{drug_id}'
+                    text='{drug_name}', callback_data=f'drug_{drug_id}'
                 )]
             ]
         )
-    
-    favorite_drugs
 
 
-# Надо забирать id препарата и сохранять в БД связь id-id
-add_to_favorite = InlineKeyboardMarkup(
-        inline_keyboard=[
-            [InlineKeyboardButton(
-                text='Сохранить в избранное поиск',
-                callback_data='drug_{drug_id}_{chat.id}'
-            )]
-        ]
-)
+async def add_fav_drugs_keyboard(
+        user_id: int, drug_id: int
+) -> InlineKeyboardMarkup:
+    is_favorite = await is_favorite_drug(user_id, drug_id)
+
+    if not is_favorite:
+        keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(
+                        text='Добавить в избранное ⭐️ препарат',
+                        callback_data=f'add_fav_{drug_id}'
+                    )]
+                ]
+        )
+    else:
+        keyboard = InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(
+                        text='Удалить из избранного ⭐️ препарат',
+                        callback_data=f'remove_fav_{drug_id}'
+                    )]
+                ]
+        )
+
+    return keyboard
 
 
-def create_drugs_keyboard(
+async def create_drugs_keyboard(
         drugs: List[dict], page: int = 0, items_per_page: int = 4
 ) -> InlineKeyboardMarkup:
     """

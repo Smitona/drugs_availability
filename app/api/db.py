@@ -193,7 +193,7 @@ async def forms_from_DB(drug_name: str) -> list:
 
 async def save_favorite_drug(
         telegram_id: int, drug_id: int
-) -> None:
+) -> bool:
     """
     Сохраняет связь пользователь—id препарата в БД.
 
@@ -207,9 +207,28 @@ async def save_favorite_drug(
         )
         session.add(fav_drug)
         await session.commit()
+    return True
 
 
-async def get_favorite_drug(telegram_id: int) -> list:
+async def is_favorite_drug(user_id: int, drug_id: int) -> None:
+    async with async_session_factory() as session:
+        query = (
+            select(User_drug)
+            .where(
+                and_(
+                    User_drug.user_id == user_id,
+                    User_drug.drug_id == drug_id
+                )
+            )
+        )
+
+        fav_drugs = await session.execute(query)
+        result = fav_drugs.scalar_one_or_none()
+
+        return result
+
+
+async def get_favorite_drugs(telegram_id: int) -> list:
     """
     Забирает из БД связь telegram_id и списка препаратов по id.
     Показывает на кнопках названия препаратов и дозировку
@@ -219,7 +238,7 @@ async def get_favorite_drug(telegram_id: int) -> list:
 
     async with async_session_factory() as session:
         query = await session.execute(
-            select(Drug.name, Drug.dosage)
+            select(Drug)
             .join(User_drug, User_drug.drug_id == Drug.id)
             .where(User_drug.user_id == telegram_id)
         )
