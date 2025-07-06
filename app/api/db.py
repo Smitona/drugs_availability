@@ -237,12 +237,22 @@ async def get_favorite_drugs(telegram_id: int) -> list:
     # callback.chat.id -> telegram_id
 
     async with async_session_factory() as session:
-        query = await session.execute(
+        query = (
             select(Drug)
             .join(User_drug, User_drug.drug_id == Drug.id)
             .where(User_drug.user_id == telegram_id)
         )
+        result = await session.execute(query)
+        fav_drugs = result.scalars().all()
 
-        fav_drugs = await query.all()
+        fav_drugs_list = []
+        for drug in fav_drugs:
+            fav_drugs_list.append({
+                'id': drug.id,
+                'name': drug.name,
+                'dosage': drug.dosage,
+                'form': drug.form,
+                'numero': drug.numero
+            })
 
-        return fav_drugs
+        return fav_drugs_list
