@@ -1,5 +1,8 @@
 from typing import List
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, \
+    CallbackQuery
+from aiogram.filters.callback_data import CallbackData
+from aiogram.utils.keyboard import InlineKeyboardBuilder
 from app.api.db import is_favorite_drug
 
 main_menu = InlineKeyboardMarkup(
@@ -48,20 +51,24 @@ async def add_fav_drugs_keyboard(
                     [InlineKeyboardButton(
                         text='Добавить в избранное ⭐️ препарат',
                         callback_data=f'add_fav_{drug_id}'
+                    )],
+                    [InlineKeyboardButton(
+                        text='🔍 Новый поиск', callback_data='search_drug'
+                    )],
+                    [InlineKeyboardButton(
+                        text='Избранные препараты',
+                        callback_data='favorite_drugs'
                     )]
                 ]
         )
     else:
-        keyboard = InlineKeyboardMarkup(
-                inline_keyboard=[
-                    [InlineKeyboardButton(
-                        text='Удалить из избранного ⭐️ препарат',
-                        callback_data=f'remove_fav_{drug_id}'
-                    )]
-                ]
-        )
+        keyboard = main_menu
 
     return keyboard
+
+
+class Pagination(CallbackData, prefix="page"):
+    page: int
 
 
 async def create_drugs_keyboard(
@@ -70,10 +77,9 @@ async def create_drugs_keyboard(
     """
     Создает клавиатуру с пагинацией для списка лекарств
 
-    Args:
-        drugs: список названий лекарств
-        page: текущая страница (начиная с 0)
-        items_per_page: количество элементов на странице
+    drugs: список названий лекарств
+    page: текущая страница (начиная с 0)
+    items_per_page: количество элементов на странице
     """
 
     if not drugs:
@@ -83,6 +89,7 @@ async def create_drugs_keyboard(
                 callback_data='search_drug'
             )]
         ])
+    builder = InlineKeyboardBuilder()
 
     start_index = page * items_per_page
     end_index = start_index + items_per_page
@@ -91,48 +98,40 @@ async def create_drugs_keyboard(
     keyboard_buttons = []
 
     for drug in current_drugs:
-        if isinstance(drug, dict):
-            drug_name = drug.get('name', 'Неизвестно')
-            drug_dosage = drug.get('dosage', '')
-            drug_form = drug.get('form', '')
-            drug_numero = drug.get('numero', '')
-            drug_id = drug.get('id', '')
+        drug_name = drug.get('name', 'Неизвестно')
+        drug_dosage = drug.get('dosage', '')
+        drug_form = drug.get('form', '')
+        drug_numero = drug.get('numero', '')
+        drug_id = drug.get('id', '')
 
-            if drug_form:
-                if len(drug_form) > 30:
-                    drug_form = drug_form.split(' ', 1)[0]
+        if drug_form and len(drug_form) > 30:
+            drug_form = drug_form.split(' ', 1)[0]
 
-            button_text = '{} {} - {} №{}'.format(
-                drug_name, drug_dosage, drug_form, drug_numero
-            )
+        button_text = '{} {} - {} №{}'.format(
+            drug_name, drug_dosage, drug_form, drug_numero
+        )
+        callback_data = f'drug_{drug_id}_{drug_name}'
 
-            callback_data = f'drug_{drug_id}_{button_text}'
-        else:
-            drug_name = str(drug)
-            button_text = drug_name
+        builder.add(InlineKeyboardButton(
+            text=button_text,
+            callback_data=callback_data
+        ))
 
-        keyboard_buttons.append([
-            InlineKeyboardButton(
-                text=button_text,
-                callback_data=callback_data
-            )
-        ])
-
-    total_pages = (len(drugs) - 1) // items_per_page + 1
+    total_pages = len(drugs) // items_per_page
     if total_pages > 1:
         navigation_buttons = []
 
         if page > 0:
             navigation_buttons.append(
                 InlineKeyboardButton(
-                    text='⬅️ Назад',
-                    callback_data=f'drugs_page_{page-1}'
+                    text='⬅️',
+                    callback_data=Pagination(page=page - 1).pack()
                 )
             )
 
         navigation_buttons.append(
             InlineKeyboardButton(
-                text=f'{page + 1}/{total_pages}', 
+                text=f'{page + 1} / {total_pages}',
                 callback_data='current_page'
             )
         )
@@ -140,22 +139,22 @@ async def create_drugs_keyboard(
         if end_index < len(drugs):
             navigation_buttons.append(
                 InlineKeyboardButton(
-                    text='Вперед ➡️',
-                    callback_data=f'drugs_page_{page+1}'
+                    text='➡️',
+                    callback_data=Pagination(page=page + 1).pack()
                 )
             )
 
-        keyboard_buttons.append(navigation_buttons)
+        builder.row(*navigation_buttons)
 
-    keyboard_buttons.append(
-        [
-            InlineKeyboardButton(
-                text='🔍 Новый поиск', callback_data='search_drug'
-            ),
-            InlineKeyboardButton(
-                text='❌ Закрыть', callback_data='close_search'
-            )
-        ]
+    builder.row(
+        InlineKeyboardButton(
+            text='🔍 Новый поиск', callback_data='search_drug'
+        ),
+        InlineKeyboardButton(
+            text='❌ Закрыть', callback_data='close_search'
+        )
     )
 
-    return InlineKeyboardMarkup(inline_keyboard=keyboard_buttons)
+    builder.row(*keyboard_buttons)
+
+    return builder.as_markup()
